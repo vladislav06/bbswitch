@@ -31,10 +31,12 @@
 #include <linux/pci.h>
 #include <linux/acpi.h>
 #include <linux/module.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <linux/suspend.h>
 #include <linux/seq_file.h>
 #include <linux/pm_runtime.h>
+#include <linux/proc_fs.h>
+#include <linux/version.h>
 
 #define BBSWITCH_VERSION "0.8"
 
@@ -260,6 +262,7 @@ static void bbswitch_off(void) {
     pci_save_state(dis_dev);
     pci_clear_master(dis_dev);
     pci_disable_device(dis_dev);
+#ifdef CONFIG_ACPI
     do {
         struct acpi_device *ad = NULL;
         int r;
@@ -274,6 +277,7 @@ static void bbswitch_off(void) {
             ad->power.state = ACPI_STATE_D0;
         }
     } while (0);
+#endif
     pci_set_power_state(dis_dev, PCI_D3cold);
 
     if (bbswitch_acpi_off())
@@ -375,6 +379,15 @@ static int bbswitch_pm_handler(struct notifier_block *nbp,
     return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
+static struct proc_ops bbswitch_fops = {
+    .proc_open   = bbswitch_proc_open,
+    .proc_read   = seq_read,
+    .proc_write  = bbswitch_proc_write,
+    .proc_lseek  = seq_lseek,
+    .proc_release= single_release
+};
+#else
 static struct file_operations bbswitch_fops = {
     .open   = bbswitch_proc_open,
     .read   = seq_read,
@@ -382,6 +395,7 @@ static struct file_operations bbswitch_fops = {
     .llseek = seq_lseek,
     .release= single_release
 };
+#endif
 
 static struct notifier_block nb = {
     .notifier_call = &bbswitch_pm_handler
@@ -397,11 +411,18 @@ static int __init bbswitch_init(void) {
     while ((pdev = pci_get_device(PCI_ANY_ID, PCI_ANY_ID, pdev)) != NULL) {
         struct acpi_buffer buf = { ACPI_ALLOCATE_BUFFER, NULL };
         acpi_handle handle;
+/*
+        if(strcmp((char *)buf.pointer,"\\_SB_.PCI0.GP17.VGA_")==0 ){
+            pr_info("skip integrated gpu");
+            continue;
+        }
+*/
         int pci_class = pdev->class >> 8;
 
         if (pci_class != PCI_CLASS_DISPLAY_VGA &&
             pci_class != PCI_CLASS_DISPLAY_3D)
             continue;
+
 
 #ifdef ACPI_HANDLE
         /* since Linux 3.8 */
@@ -418,7 +439,9 @@ static int __init bbswitch_init(void) {
 
         acpi_get_name(handle, ACPI_FULL_PATHNAME, &buf);
 
-        if (pdev->vendor == PCI_VENDOR_ID_INTEL) {
+        pr_info("Vendor id: %i",pdev->vendor);
+        //amd vendor id = 4098
+        if (pdev->vendor == 4098) {
             igd_handle = handle;
             pr_info("Found integrated VGA device %s: %s\n",
                 dev_name(&pdev->dev), (char *)buf.pointer);
