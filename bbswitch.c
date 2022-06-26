@@ -411,11 +411,18 @@ static int __init bbswitch_init(void) {
     while ((pdev = pci_get_device(PCI_ANY_ID, PCI_ANY_ID, pdev)) != NULL) {
         struct acpi_buffer buf = { ACPI_ALLOCATE_BUFFER, NULL };
         acpi_handle handle;
+/*
+        if(strcmp((char *)buf.pointer,"\\_SB_.PCI0.GP17.VGA_")==0 ){
+            pr_info("skip integrated gpu");
+            continue;
+        }
+*/
         int pci_class = pdev->class >> 8;
 
         if (pci_class != PCI_CLASS_DISPLAY_VGA &&
             pci_class != PCI_CLASS_DISPLAY_3D)
             continue;
+
 
 #ifdef ACPI_HANDLE
         /* since Linux 3.8 */
@@ -432,7 +439,9 @@ static int __init bbswitch_init(void) {
 
         acpi_get_name(handle, ACPI_FULL_PATHNAME, &buf);
 
-        if (pdev->vendor == PCI_VENDOR_ID_INTEL) {
+        pr_info("Vendor id: %i",pdev->vendor);
+        //amd vendor id = 4098
+        if (pdev->vendor == 4098) {
             igd_handle = handle;
             pr_info("Found integrated VGA device %s: %s\n",
                 dev_name(&pdev->dev), (char *)buf.pointer);
