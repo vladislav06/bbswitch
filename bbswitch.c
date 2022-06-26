@@ -411,12 +411,7 @@ static int __init bbswitch_init(void) {
     while ((pdev = pci_get_device(PCI_ANY_ID, PCI_ANY_ID, pdev)) != NULL) {
         struct acpi_buffer buf = { ACPI_ALLOCATE_BUFFER, NULL };
         acpi_handle handle;
-/*
-        if(strcmp((char *)buf.pointer,"\\_SB_.PCI0.GP17.VGA_")==0 ){
-            pr_info("skip integrated gpu");
-            continue;
-        }
-*/
+
         int pci_class = pdev->class >> 8;
 
         if (pci_class != PCI_CLASS_DISPLAY_VGA &&
