@@ -2,6 +2,8 @@
 
 About
 -----
+now works on lenovo 82JW Legion 5 15ACH6
+-----
 
 bbswitch is a kernel module which automatically detects the required ACPI calls
 for two kinds of Optimus laptops. It has been verified to work with "real"
